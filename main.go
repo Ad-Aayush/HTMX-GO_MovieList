@@ -4,48 +4,58 @@ import (
 	"html/template"
 	"log"
 	"net/http"
+	"strconv"
 )
 
 type Film struct {
+	ID       int
 	Title    string
 	Director string
 }
 
-func main() {
-	films := map[string][]Film{
-		"Films": {
-			{Title: "The Godfather", Director: "Francis Ford Coppola"},
-			{Title: "Pulp Fiction", Director: "Quentin Tarantino"},
-			{Title: "Se7ev", Director: "David Fincher"},
-		},
-	}
-	handler := func(w http.ResponseWriter, r *http.Request) {
-		log.Print("Hello world received a request.")
-		temp := template.Must(template.ParseFiles("index.html"))
-		
-		temp.Execute(w, films)
-	}
-	handle_add_film := func(w http.ResponseWriter, r *http.Request, ) {
-		log.Print("handle_add_film received a request.")
-		temp := template.Must(template.ParseFiles("add-film.html"))
-		title := r.FormValue("title")
-		director := r.FormValue("director")
-		film := Film{Title: title, Director: director}
-		to_send := map[string]Film{}
-		to_send["Film"] = film
-		films["Films"] = append(films["Films"], film)
+var (
+	films  = make(map[string]map[int]Film)
+	nextID = 3
+)
 
-		temp.Execute(w, to_send)
+func main() {
+	// Initialize some films
+	if films["Films"] == nil {
+		films["Films"] = make(map[int]Film)
 	}
-	handle_delete := func(w http.ResponseWriter, r *http.Request, ) {
-		log.Print("handle_delete received a request.")
-		html_str := ""
-		temp, _ := template.New("delete-film.html").Parse(html_str)
-		
-		temp.Execute(w, nil)
-	}
+	films["Films"][0] = Film{ID: 0, Title: "The Godfather", Director: "Francis Ford Coppola"}
+	films["Films"][1] = Film{ID: 1, Title: "Pulp Fiction", Director: "Quentin Tarantino"}
+	films["Films"][2] = Film{ID: 2, Title: "Se7en", Director: "David Fincher"}
+
 	http.HandleFunc("/", handler)
-	http.HandleFunc("/add-film", handle_add_film)
-	http.HandleFunc("/delete-film", handle_delete)
-	http.ListenAndServe(":8000", nil)
+	http.HandleFunc("/add-film", handleAddFilm)
+	http.HandleFunc("/delete-film", handleDeleteFilm)
+	log.Fatal(http.ListenAndServe(":8000", nil))
+}
+
+func handler(w http.ResponseWriter, r *http.Request) {
+	log.Print("Home Page received a request.")
+	temp := template.Must(template.ParseFiles("index.html"))
+	temp.Execute(w, films)
+}
+
+func handleAddFilm(w http.ResponseWriter, r *http.Request) {
+	log.Print("Add Film received a request.")
+	title := r.FormValue("title")
+	director := r.FormValue("director")
+	film := Film{ID: nextID, Title: title, Director: director}
+	films["Films"][nextID] = film
+	nextID++
+
+	temp := template.Must(template.ParseFiles("index.html"))
+	temp.Execute(w, films)
+}
+
+func handleDeleteFilm(w http.ResponseWriter, r *http.Request) {
+	log.Print("Delete Film received a request.")
+	idStr := r.FormValue("filmId")
+	id, _ := strconv.Atoi(idStr)
+	delete(films["Films"], id)
+	temp := template.Must(template.ParseFiles("index.html"))
+	temp.Execute(w, films)
 }
