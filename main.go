@@ -4,6 +4,7 @@ import (
 	"html/template"
 	"log"
 	"net/http"
+	"sort"
 	"strconv"
 )
 
@@ -18,7 +19,7 @@ var (
 	nextID = 3
 )
 
-func main() {
+func main() {	
 	// Initialize some films
 	if films["Films"] == nil {
 		films["Films"] = make(map[int]Film)
@@ -47,15 +48,31 @@ func handleAddFilm(w http.ResponseWriter, r *http.Request) {
 	films["Films"][nextID] = film
 	nextID++
 
-	temp := template.Must(template.ParseFiles("index.html"))
-	temp.Execute(w, films)
+	temp := template.Must(template.ParseFiles("add-film.html"))
+	temp.Execute(w, film)
 }
 
 func handleDeleteFilm(w http.ResponseWriter, r *http.Request) {
-	log.Print("Delete Film received a request.")
+	// log.Print("Delete Film received a request.")
 	idStr := r.FormValue("filmId")
 	id, _ := strconv.Atoi(idStr)
+	// log.Print("Size:", len(films["Films"]))
 	delete(films["Films"], id)
-	temp := template.Must(template.ParseFiles("index.html"))
-	temp.Execute(w, films)
+	// log.Print("DeletedId: ", id)
+
+	temp := template.Must(template.ParseFiles("add-film.html"))
+	// Keys slice
+	keySlice := []int{}
+
+	for key := range films["Films"] {
+		keySlice = append(keySlice, key)
+		// log.Print("Key: ", key, ", Film: ", film)
+	}
+	
+	sort.Ints(keySlice)
+	log.Printf("KeySlice: %v", keySlice)
+	for _, key := range keySlice {
+
+		temp.Execute(w, films["Films"][key])
+	}
 }
