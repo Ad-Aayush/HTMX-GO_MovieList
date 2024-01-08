@@ -1,0 +1,25 @@
+<form class="w-full" hx-put="/edit-film" hx-target="this" hx-swap="outerHTML">
+    <div class="flex flex-row items-center justify-between">
+        <!-- Input Fields -->
+        <input type="text" name="title" required
+            class="flex-1 px-3 py-2 mr-2 border border-gray-300 rounded-md focus:outline-none focus:ring focus:border-blue-300"
+            value="{{.Title}}">
+        <input type="text" name="director" required
+            class="flex-1 px-3 py-2 mx-2 border border-gray-300 rounded-md focus:outline-none focus:ring focus:border-blue-300"
+            value="{{.Director}}">
+        <input type="hidden" name="filmId" value="{{.ID}}">
+        <!-- Submit Button -->
+        <button
+            class="bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline mr-2"
+            hx-vals='{"filmId": "{{.ID}}"}'>
+            Submit
+        </button>
+
+        <!-- Cancel Button -->
+        <button
+            class="bg-red-500 hover:bg-red-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline"
+            hx-vals='{"filmId": "{{.ID}}"}' hx-get="/edit-film">
+            Cancel
+        </button>
+    </div>
+</form>
