@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"html/template"
 	"log"
 	"sort"
@@ -33,8 +34,17 @@ func main() {
 
 	e.GET("/", func(c echo.Context) error {
 		log.Print("Home Page received a request.")
-		temp := template.Must(template.ParseFiles("index.html"))
-		return temp.Execute(c.Response().Writer, films)
+		// temp := template.Must(template.ParseFiles("index.html"))
+		keySlice := []int{}
+
+		for key := range films["Films"] {
+			keySlice = append(keySlice, key)
+			// log.Print("Key: ", key, ", Film: ", film)
+		}
+
+		sort.Ints(keySlice)
+		component := index(films["Films"], keySlice)
+		return component.Render(context.Background(), c.Response().Writer)
 	})
 	// http.HandleFunc("/add-film", handleAddFilm)
 	e.POST("/add-film", func(c echo.Context) error {
@@ -45,8 +55,10 @@ func main() {
 		films["Films"][nextID] = film
 		nextID++
 
-		temp := template.Must(template.ParseFiles("add-film.html"))
-		return temp.Execute(c.Response().Writer, film)
+		// temp := template.Must(template.ParseFiles("add-film.html"))
+		// return temp.Execute(c.Response().Writer, film)
+		component := add_film(film)
+		return component.Render(context.Background(), c.Response().Writer)
 	})
 	// http.HandleFunc("/edit-film", handleEdit)
 	e.POST("/edit-film", func(c echo.Context) error {
@@ -58,9 +70,12 @@ func main() {
 		}
 
 		film := films["Films"][id]
-		temp := template.Must(template.ParseFiles("edit-film.html"))
 		log.Print("POST FILM", film)
-		return temp.Execute(c.Response().Writer, film)
+
+		// temp := template.Must(template.ParseFiles("edit-film.html"))
+		// return temp.Execute(c.Response().Writer, film)
+		component := edit(film)
+		return component.Render(context.Background(), c.Response().Writer)
 	})
 
 	e.PUT("/edit-film", func(c echo.Context) error {
@@ -68,7 +83,7 @@ func main() {
 		idStr := c.FormValue("filmId")
 		id, err := strconv.Atoi(idStr)
 		if err != nil {
-			log.Fatal(err)
+			log.Fatal(c, err)
 		}
 
 		log.Print("Edit Film PUT received a request.")
@@ -79,21 +94,25 @@ func main() {
 		film := Film{ID: id, Title: title, Director: director}
 		films["Films"][id] = film
 		log.Print("Film: ", film, idStr, id)
-		temp := template.Must(template.ParseFiles("add-film.html"))
-		return temp.ExecuteTemplate(c.Response().Writer, "edit-film", film)
+		// temp := template.Must(template.ParseFiles("add-film.html"))
+		// return temp.ExecuteTemplate(c.Response().Writer, "edit-film", film)
+		component := edit_rep(film)
+		return component.Render(context.Background(), c.Response().Writer)
 	})
 
-	e.GET("/edit-film", func(c echo.Context) error {
+	e.PUT("/can-film", func(c echo.Context) error {
 		log.Print("Edit Film GET received a request.")
 
 		idStr := c.FormValue("filmId")
 		id, err := strconv.Atoi(idStr)
 		if err != nil {
-			log.Fatal(err)
+			log.Fatal(c, err)
 		}
 		film := films["Films"][id]
-		temp := template.Must(template.ParseFiles("add-film.html"))
-		return temp.ExecuteTemplate(c.Response().Writer, "edit-film", film)
+		// temp := template.Must(template.ParseFiles("add-film.html"))
+		// return temp.ExecuteTemplate(c.Response().Writer, "edit-film", film)
+		component := edit_rep(film)
+		return component.Render(context.Background(), c.Response().Writer)
 	})
 
 	// http.HandleFunc("/delete-film", handleDeleteFilm)
