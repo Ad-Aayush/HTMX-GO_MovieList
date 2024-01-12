@@ -3,9 +3,10 @@ package main
 import (
 	"html/template"
 	"log"
-	"net/http"
 	"sort"
 	"strconv"
+
+	"github.com/labstack/echo/v4"
 )
 
 type Film struct {
@@ -28,85 +29,97 @@ func main() {
 	films["Films"][1] = Film{ID: 1, Title: "Pulp Fiction", Director: "Quentin Tarantino"}
 	films["Films"][2] = Film{ID: 2, Title: "Se7en", Director: "David Fincher"}
 
-	http.HandleFunc("/", handler)
-	http.HandleFunc("/add-film", handleAddFilm)
-	http.HandleFunc("/edit-film", handleEdit)
-	http.HandleFunc("/delete-film", handleDeleteFilm)
-	log.Fatal(http.ListenAndServe(":8000", nil))
-}
+	e := echo.New()
 
-func handler(w http.ResponseWriter, r *http.Request) {
-	log.Print("Home Page received a request.")
-	temp := template.Must(template.ParseFiles("index.html"))
-	temp.Execute(w, films)
-}
+	e.GET("/", func(c echo.Context) error {
+		log.Print("Home Page received a request.")
+		temp := template.Must(template.ParseFiles("index.html"))
+		return temp.Execute(c.Response().Writer, films)
+	})
+	// http.HandleFunc("/add-film", handleAddFilm)
+	e.POST("/add-film", func(c echo.Context) error {
+		log.Print("Add Film received a request.")
+		title := c.FormValue("title")
+		director := c.FormValue("director")
+		film := Film{ID: nextID, Title: title, Director: director}
+		films["Films"][nextID] = film
+		nextID++
 
-func handleAddFilm(w http.ResponseWriter, r *http.Request) {
-	log.Print("Add Film received a request.")
-	title := r.FormValue("title")
-	director := r.FormValue("director")
-	film := Film{ID: nextID, Title: title, Director: director}
-	films["Films"][nextID] = film
-	nextID++
+		temp := template.Must(template.ParseFiles("add-film.html"))
+		return temp.Execute(c.Response().Writer, film)
+	})
+	// http.HandleFunc("/edit-film", handleEdit)
+	e.POST("/edit-film", func(c echo.Context) error {
+		log.Print("Edit Film received a request.")
+		idStr := c.FormValue("filmId")
+		id, err := strconv.Atoi(idStr)
+		if err != nil {
+			log.Fatal(err)
+		}
 
-	temp := template.Must(template.ParseFiles("add-film.html"))
-	temp.Execute(w, film)
-}
-
-func handleDeleteFilm(w http.ResponseWriter, r *http.Request) {
-	// log.Print("Delete Film received a request.")
-	idStr := r.FormValue("filmId")
-	id, _ := strconv.Atoi(idStr)
-	// log.Print("Size:", len(films["Films"]))
-	delete(films["Films"], id)
-	// log.Print("DeletedId: ", id)
-
-	temp := template.Must(template.ParseFiles("add-film.html"))
-	// Keys slice
-	keySlice := []int{}
-
-	for key := range films["Films"] {
-		keySlice = append(keySlice, key)
-		// log.Print("Key: ", key, ", Film: ", film)
-	}
-
-	sort.Ints(keySlice)
-	log.Printf("KeySlice: %v", keySlice)
-	for _, key := range keySlice {
-
-		temp.Execute(w, films["Films"][key])
-	}
-}
-
-func handleEdit(w http.ResponseWriter, r *http.Request) {
-	log.Print("Edit Film received a request.")
-	idStr := r.FormValue("filmId")
-	id, err := strconv.Atoi(idStr)
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	if r.Method == http.MethodPost {
 		film := films["Films"][id]
 		temp := template.Must(template.ParseFiles("edit-film.html"))
 		log.Print("POST FILM", film)
-		temp.Execute(w, film)
-	} else if r.Method == http.MethodPut {
+		return temp.Execute(c.Response().Writer, film)
+	})
+
+	e.PUT("/edit-film", func(c echo.Context) error {
+		log.Print("Edit Film received a request.")
+		idStr := c.FormValue("filmId")
+		id, err := strconv.Atoi(idStr)
+		if err != nil {
+			log.Fatal(err)
+		}
+
 		log.Print("Edit Film PUT received a request.")
 
 		log.Print("ID: ", idStr)
-		title := r.FormValue("title")
-		director := r.FormValue("director")
+		title := c.FormValue("title")
+		director := c.FormValue("director")
 		film := Film{ID: id, Title: title, Director: director}
 		films["Films"][id] = film
 		log.Print("Film: ", film, idStr, id)
 		temp := template.Must(template.ParseFiles("add-film.html"))
-		temp.ExecuteTemplate(w, "edit-film", film)
-	} else if r.Method == http.MethodGet {
+		return temp.ExecuteTemplate(c.Response().Writer, "edit-film", film)
+	})
+
+	e.GET("/edit-film", func(c echo.Context) error {
 		log.Print("Edit Film GET received a request.")
 
+		idStr := c.FormValue("filmId")
+		id, err := strconv.Atoi(idStr)
+		if err != nil {
+			log.Fatal(err)
+		}
 		film := films["Films"][id]
 		temp := template.Must(template.ParseFiles("add-film.html"))
-		temp.ExecuteTemplate(w, "edit-film", film)
-	}
+		return temp.ExecuteTemplate(c.Response().Writer, "edit-film", film)
+	})
+
+	// http.HandleFunc("/delete-film", handleDeleteFilm)
+	e.POST("/delete-film", func(c echo.Context) error {
+		idStr := c.FormValue("filmId")
+		id, _ := strconv.Atoi(idStr)
+		// log.Print("Size:", len(films["Films"]))
+		delete(films["Films"], id)
+		// log.Print("DeletedId: ", id)
+
+		temp := template.Must(template.ParseFiles("add-film.html"))
+		// Keys slice
+		keySlice := []int{}
+
+		for key := range films["Films"] {
+			keySlice = append(keySlice, key)
+			// log.Print("Key: ", key, ", Film: ", film)
+		}
+
+		sort.Ints(keySlice)
+		log.Printf("KeySlice: %v", keySlice)
+		for _, key := range keySlice {
+
+			temp.Execute(c.Response().Writer, films["Films"][key])
+		}
+		return nil
+	})
+	e.Logger.Fatal(e.Start(":8000"))
 }
